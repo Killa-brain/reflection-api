@@ -1,3 +1,9 @@
+package domain;
+
+import test.annotation.AfterSuite;
+import test.annotation.BeforeSuite;
+import test.annotation.Test;
+
 public class TestTwoClass {
 
     @BeforeSuite

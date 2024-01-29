@@ -1,3 +1,7 @@
+package domain;
+
+import test.annotation.AfterSuite;
+
 public class TestThreeClass {
 
     @AfterSuite
