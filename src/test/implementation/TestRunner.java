@@ -53,14 +53,14 @@ public class TestRunner {
                             "There can be only one method with annotation AfterSuite");
                 }
                 if (m.isAnnotationPresent(Test.class)) {
-                    testMethods.add(m);
+                    checkAndAddMethods(m, testMethods);
                 }
             } catch (Exception e) {
                 errors.add(e.getMessage());
             }
         }
 
-        Collections.sort(testMethods, Comparator.comparingInt(m -> getPriority(m)));
+        Collections.sort(testMethods, Comparator.comparingInt(TestRunner::getPriority));
         try {
             if (beforeSuiteMethod != null) {
                 beforeSuiteMethod.invoke(cls.getDeclaredConstructor().newInstance());
@@ -73,11 +73,7 @@ public class TestRunner {
 
                 if (m.isAnnotationPresent(Test.class)){
                     if (m.isAnnotationPresent(CsvSource.class)) {
-                        Object[] arguments = parseCsvSource(m.getAnnotation(CsvSource.class).value());
-                        if (arguments != null && m.getParameterCount() != arguments.length) {
-                            throw new RuntimeException("Incorrect count of parameters for annotation @CsvSource " +
-                                    " for method " + m);
-                        }
+                        Object[] arguments = parseCsvSource(m);
                         m.invoke(instance, arguments);
                     } else m.invoke(instance);
                 }
@@ -95,6 +91,15 @@ public class TestRunner {
         System.out.println("\nEnd testing for class " + cls.getSimpleName() + " \n \n");
     }
 
+    private static void checkAndAddMethods(Method m, List<Method> testMethods) {
+        int priority = getPriority(m);
+        if (priority < 1 || priority > 10) {
+            throw new RuntimeException("Test " + m + " failed. Cause: " +
+                    "priority must by more from 1 and until 1");
+        }
+        testMethods.add(m);
+    }
+
     private static void printErrors(List<String> errors) {
         if (errors != null && errors.size() > 0) {
             System.out.println("\n Errors:");
@@ -103,10 +108,11 @@ public class TestRunner {
     }
 
     private static int getPriority(Method m) {
-        return m.isAnnotationPresent(Test.class) ? m.getAnnotation(Test.class).priority() : 5;
+        return m.getAnnotation(Test.class).priority();
     }
 
-    private static Object[] parseCsvSource(String csvSource) {
+    private static Object[] parseCsvSource(Method method) {
+        String csvSource = method.getAnnotation(CsvSource.class).value();
         // Parse CSV string and convert each element to the appropriate type
         if (csvSource.isBlank() || csvSource.isEmpty()) {
             return null;
@@ -122,6 +128,10 @@ public class TestRunner {
             } else {
                 arguments[i] = element;
             }
+        }
+        if (method.getParameterCount() != arguments.length) {
+            throw new RuntimeException("Incorrect count of parameters for annotation @CsvSource " +
+                    " for method " + method);
         }
         return arguments;
     }
